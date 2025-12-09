@@ -56,3 +56,20 @@ void ht_del_hash_table(ht_hash_table* ht) {
     //and free the strcut as well
     free(ht);
 }
+
+//why do we hash?? hashing produces a random integer for the certain string , 
+//with these int , we have the power of SUPER FAST LOOPUP times ,cause strings are slower than ints
+static int ht_hash(const char* s , const int a,const int m ){
+    long hash = 0;
+    //strlrn checks the length of the string s
+    const int len_s = strlen(s);
+    //calculates a value that is somewhat random based on the string s
+    for (int i = 0; i < len_s; i++) {
+        hash += (long)pow(a, len_s - (i + 1)) * s[i];
+        hash = hash % m;
+    }
+    //the somewhat random value is between 0 and m-1 (53 in this casee)
+    return (int)hash;
+}
+//it is inevitable that the same hash value be in 2 or more different strings
+//so in the saem hash(bucket) there may be multiple items
