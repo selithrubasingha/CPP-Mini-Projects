@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "hash_table.h"
+#define HT_PRIME_1 151
+#define HT_PRIME_2 163
 
 //const char* k means: "A pointer to the beginning of a string representing the key."
 //const char* v means: "A pointer to the beginning of a string representing the value."
@@ -73,3 +75,17 @@ static int ht_hash(const char* s , const int a,const int m ){
 }
 //it is inevitable that the same hash value be in 2 or more different strings
 //so in the saem hash(bucket) there may be multiple items
+
+
+//double hashing is the way to resolve collision conflicts, it won't reduce conflicts , 
+//but it will uniformly spread the hash inside the 53 buckets
+static int ht_get_hash(const char* s , const int num_buckets,const int attempt){
+    //some random prime number definitions at the top of the file
+    const int hash_a = ht_hash(s,HT_PRIME_1,num_buckets);
+    const int hash_b = ht_hash(s,HT_PRIME_2,num_buckets);
+    //if collision=0 ,then it isonly hashed one time.
+    //but if it collides, then the second part will kick in and make a hash somewhat far away fromthe` first one.
+    //the (hash_b + 1) is to avoid getting a zero value for hash_b 
+    //and num_buckets modulus to make sure it stays within the bounds of the array
+    return (hash_a + (attempt * (hash_b + 1))) % num_buckets;
+}
