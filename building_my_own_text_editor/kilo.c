@@ -1,54 +1,80 @@
+/*** includes ***/
+
 #include <stdlib.h>
+#include <errno.h>
 #include <termios.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <stdio.h>
 
-// GLOBAL VARIABLE
-// We need to store the original settings here so we can access them 
-// later to restore the terminal when we quit.
+/*** data ***/
+
 struct termios orig_termios;
 
-// FUNCTION: disableRawMode
-// This is the "Cleanup Crew". It restores the terminal to normal.
+/*** terminal ***/
+
+// Print error message and exit
+void die(const char *s) {
+  perror(s);
+  exit(1);
+}
+
+// Restore terminal to original settings
 void disableRawMode() {
-  // Apply the 'orig_termios' settings to Standard Input.
-  // TCSAFLUSH means "Wait for output to finish, and discard unread input."
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+        die("tcsetattr");
 }
 
-// FUNCTION: enableRawMode
-// This sets up the terminal for our text editor.
+// Enable raw mode (disable echo, canonical mode, signals, etc.)
 void enableRawMode() {
-  // 1. Take a snapshot of the current terminal settings and save it in 'orig_termios'
-  tcgetattr(STDIN_FILENO, &orig_termios);
+    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr");
+    atexit(disableRawMode); // Restore settings on exit
 
-  // 2. Register 'disableRawMode'. If the program crashes or finishes main(),
-  //    the OS ensures disableRawMode is called automatically.
-  atexit(disableRawMode);
+    struct termios raw = orig_termios;
 
-  // 3. Make a copy of the settings into a new variable called 'raw'
-  struct termios raw = orig_termios;
+    // Disable special input processing (flow control, CR translation, parity)
+    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    
+    // Disable output processing (post-processing)
+    raw.c_oflag &= ~(OPOST);
+    
+    // Set character size to 8 bits per byte
+    raw.c_cflag |= (CS8);
+    
+    // Disable local flags (echo, canonical mode, signals, extended input)
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 
-  // 4. Turn off the ECHO flag in the local flags (c_lflag).
-  //    (Stop the terminal from printing typed keys automatically).
-  raw.c_lflag &= ~(ECHO);
+    // Set read timeout (VMIN=0, VTIME=1 => 100ms timeout)
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 1;
 
-  // 5. Apply these new 'raw' settings to the terminal.
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
+
+/*** init ***/
 
 int main() {
-  // Turn on our custom settings immediately.
-  enableRawMode();
+    enableRawMode();
 
-  char c;
-  
-  // THE LOOP
-  // read(STDIN_FILENO, &c, 1): Try to read 1 byte from keyboard into variable 'c'.
-  // == 1: Did we successfully read 1 byte?
-  // && c != 'q': AND is that byte NOT the letter 'q'?
-  while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q'); 
-      // The semicolon ; here means "Do nothing inside the loop."
-      // We are just processing input until 'q' is pressed.
+    char c;
 
-  return 0;
+    while (1) {
+        c = '\0';
+        
+        // Read 1 byte with error handling (ignore timeout error EAGAIN)
+        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
+        
+        // Note: Logic allows second read which may overwrite previous byte
+        read(STDIN_FILENO, &c, 1);
+
+        if (iscntrl(c)) {
+            printf("%d\r\n", c);
+        } else {
+            printf("%d ('%c')\r\n", c, c);
+        }
+
+        if (c == 'q') break;
+    }
+    
+    return 0;
 }
