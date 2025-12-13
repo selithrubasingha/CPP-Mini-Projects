@@ -12,6 +12,10 @@
 #include <sys/types.h>
 
 /*** defines ***/
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 #define KILO_VERSION "0.0.1"
@@ -221,7 +225,7 @@ void editorDrawRows(struct abuf *ab) {
     int y;
     for (y = 0; y < E.screenrows; y++) {
       if (y >= E.numrows) {
-        if (y == E.screenrows / 2) {
+        if (E.numrows == 0 && y == E.screenrows / 3) {
           char welcome[80];
           int welcomelen = snprintf(welcome, sizeof(welcome),
             "Kilo editor -- version %s", KILO_VERSION);
