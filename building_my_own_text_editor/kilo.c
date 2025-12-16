@@ -55,6 +55,7 @@ struct editorConfig
   struct termios orig_termios;
   int numrows;
   erow *row;
+  char* filename;
 };
 struct editorConfig E;
 
@@ -283,6 +284,10 @@ void editorAppendRow(char *s, size_t len)
 /*** file i/o ***/
 void editorOpen(char *filename)
 {
+  //clean up previous filename if any and allocate new memory
+  free(E.filename);
+  E.filename = strdup(filename);
+
   FILE *fp = fopen(filename, "r");
   if (!fp)
     die("fopen");
@@ -400,11 +405,24 @@ void editorDrawRows(struct abuf *ab)
     }
 
     abAppend(ab, "\x1b[K", 3);
-    if (y < E.screenrows - 1)
-    {
       abAppend(ab, "\r\n", 2);
     }
+  
+}
+
+void editorDrawStatusBar(struct abuf *ab) {
+  abAppend(ab, "\x1b[7m", 4);
+  
+  char status[80];
+  int len = snprintf(status, sizeof(status), "%.20s - %d lines",
+    E.filename ? E.filename : "[No Name]", E.numrows);
+  if (len > E.screencols) len = E.screencols;
+  abAppend(ab, status, len);
+  while (len < E.screencols) {
+    abAppend(ab, " ", 1);
+    len++;
   }
+  abAppend(ab, "\x1b[m", 3);
 }
 
 void editorRefreshScreen()
@@ -417,6 +435,7 @@ void editorRefreshScreen()
   // abAppend(&ab, "\x1b[2J", 4);
   abAppend(&ab, "\x1b[H", 3);
   editorDrawRows(&ab);
+  editorDrawStatusBar(&ab);
 
   char buf[32];
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, (E.rx - E.coloff) + 1);
@@ -498,7 +517,9 @@ void editorProcessKeypress()
     E.cx = 0;
     break;
   case END_KEY:
-    E.cx = E.screencols - 1;
+  //go to the end of a line (where the text ends not the screen)
+    if (E.cy < E.numrows)
+      E.cx = E.row[E.cy].size;
     break;
 
   case PAGE_UP:
@@ -528,8 +549,10 @@ void initEditor()
   E.coloff = 0;
   E.numrows = 0;
   E.row = NULL;
+  E.filename = NULL;
   if (getWindowSize(&E.screenrows, &E.screencols) == -1)
     die("getWindowSize");
+  E.screenrows -= 2;
 }
 
 int main(int argc, char *argv[])
