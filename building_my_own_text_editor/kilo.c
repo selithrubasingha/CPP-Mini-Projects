@@ -412,15 +412,25 @@ void editorDrawRows(struct abuf *ab)
 
 void editorDrawStatusBar(struct abuf *ab) {
   abAppend(ab, "\x1b[7m", 4);
-  
-  char status[80];
+  char status[80], rstatus[80];
+  //snprintf --> Safely writes up to n bytes to buffer, returning the length the string *would* have been if it fit.
   int len = snprintf(status, sizeof(status), "%.20s - %d lines",
     E.filename ? E.filename : "[No Name]", E.numrows);
+  int rlen = snprintf(rstatus, sizeof(rstatus), "%d/%d",
+    E.cy + 1, E.numrows);
   if (len > E.screencols) len = E.screencols;
   abAppend(ab, status, len);
   while (len < E.screencols) {
-    abAppend(ab, " ", 1);
-    len++;
+    //are we close to the right most screen edge?
+    if (E.screencols - len == rlen) {
+      //if were close enough , append the rstatus
+      abAppend(ab, rstatus, rlen);
+      break;
+    } else {
+      //if not just append spaces
+      abAppend(ab, " ", 1);
+      len++;
+    }
   }
   abAppend(ab, "\x1b[m", 3);
 }
