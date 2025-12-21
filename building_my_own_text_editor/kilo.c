@@ -480,6 +480,7 @@ void editorDrawStatusBar(struct abuf *ab) {
   //escape sequence -> invert colors!
   abAppend(ab, "\x1b[7m", 4);
   
+  //fill the buffers and adAppend them
   char status[80], rstatus[80];
   int len = snprintf(status, sizeof(status), "%.20s - %d lines",
     E.filename ? E.filename : "[No Name]", E.numrows);
@@ -504,20 +505,23 @@ void editorDrawStatusBar(struct abuf *ab) {
 void editorRefreshScreen()
 {
   editorScroll();
-
+  //initilize the append buffer
   struct abuf ab = ABUF_INIT;
 
+  //hide the cursor
   abAppend(&ab, "\x1b[?25l", 6);
-  // abAppend(&ab, "\x1b[2J", 4);
+  //move the cursor to the top left
   abAppend(&ab, "\x1b[H", 3);
   editorDrawRows(&ab);
   editorDrawStatusBar(&ab);
   editorDrawMessageBar(&ab);
 
   char buf[32];
+  //move the to a epcific position
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, (E.rx - E.coloff) + 1);
   abAppend(&ab, buf, strlen(buf));
 
+  //show the cursor
   abAppend(&ab, "\x1b[?25h", 6);
 
   write(STDOUT_FILENO, ab.b, ab.len);
@@ -525,10 +529,14 @@ void editorRefreshScreen()
 }
 
 void editorSetStatusMessage(const char *fmt, ...) {
+  //variadic functions -> lets you pass a flexible number of arguments
   va_list ap;
   va_start(ap, fmt);
+  //setting the message  to the fmt
   vsnprintf(E.statusmsg, sizeof(E.statusmsg), fmt, ap);
   va_end(ap);
+
+  //tells the exact time the status message is made? i think this will be used later
   E.statusmsg_time = time(NULL);
 }
 
@@ -655,7 +663,7 @@ int main(int argc, char *argv[])
   initEditor();
   if (argc >= 2)
   {
-    editorOpen(argv[1]);
+    editorOpen(argv[1]); //this argv[1] containes the file name! we give it in the terminal
   }
 
   editorSetStatusMessage("HELP: Ctrl-Q = quit");
