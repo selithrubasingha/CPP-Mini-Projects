@@ -328,6 +328,23 @@ void editorAppendRow(char *s, size_t len)
   E.numrows++;
 }
 
+void editorRowInsertChar(erow *row , int at , int c ){
+
+  //if the index is incorrect we default to end of the line
+  if (at<0 || at>row->size) at = row->size;
+
+  row->chars = realloc(row->chars,row->size+2);//+2 one for the new character added and other for the null terminator?
+
+  //memove is used for shifting the whole line to the right . memmove is more memory safe than memcpy
+  memmove(row->chars[at+1],row->chars[at],row->size-at+1);//we only shift the chars to the right
+  
+  row->size++;
+  row->chars[at] = c ;
+
+  editorUpdateRow(row);
+
+
+}
 /*** file i/o ***/
 void editorOpen(char *filename)
 {
