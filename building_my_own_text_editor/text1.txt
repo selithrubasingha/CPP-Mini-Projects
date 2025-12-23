@@ -1,7 +1,7 @@
 
 Hello, world this is selith bro!
 This is a standard line of text.but is it though? i mwan can you even trust this text?
-12345
+1234567678
    This line starts with spaces.
 
 The line below is intentionally very long to test your horizontal truncation logic:
