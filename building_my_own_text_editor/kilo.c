@@ -76,6 +76,7 @@ struct abuf
 /***function prototypes***/
 char *editorRowsToString(int *buflen);
 void editorDrawMessageBar(struct abuf *ab);
+void editorSetStatusMessage(const char *fmt, ...);
 
 /*** terminal ***/
 
@@ -420,18 +421,21 @@ void editorSave(){
   //we use the 3 if conditionals to ERROR HANDLE.
   if (fd!=-1){
     //if the original file is 100line and i deleted 50 lines ... to clean the other 50 we use truncate
+    //even though these are inside if statemnets ... they actually trunacate and write while inside the if statement as well
     if (ftruncate(fd , len)!=-1){
       //this is where the magic happens
       if (write(fd, buf, len) == len) {
           //close the fd int and free the buf
         close(fd);
         free(buf);
+        editorSetStatusMessage("%d bytes written to disk", len);
         return;
 
     }
   }  close(fd);
 }
   free(buf);
+  editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 /*** append buffer ***/
 
@@ -782,7 +786,7 @@ int main(int argc, char *argv[])
     editorOpen(argv[1]); //this argv[1] containes the file name! we give it in the terminal
   }
 
-  editorSetStatusMessage("HELP: Ctrl-Q = quit");
+  editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit");
 
   // char c;
 
