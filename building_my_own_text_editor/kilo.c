@@ -417,18 +417,23 @@ void editorSave(){
   // O_RDWR | O_CREAT-> "I want the file to be Read/Write AND I want it to be created if it doesn't exist."
   int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
 
-  //if the original file is 100line and i deleted 50 lines ... to clean the other 50 we use truncate
-  ftruncate(fd , len);
+  //we use the 3 if conditionals to ERROR HANDLE.
+  if (fd!=-1){
+    //if the original file is 100line and i deleted 50 lines ... to clean the other 50 we use truncate
+    if (ftruncate(fd , len)!=-1){
+      //this is where the magic happens
+      if (write(fd, buf, len) == len) {
+          //close the fd int and free the buf
+        close(fd);
+        free(buf);
+        return;
 
-  //this is where the magic happens
-  write(fd , buf ,len);
-
-  //close the fd int and free the buf
-  close(fd);
+    }
+  }  close(fd);
+}
   free(buf);
 }
 /*** append buffer ***/
-
 
 
 #define ABUF_INIT {NULL, 0}
