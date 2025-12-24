@@ -731,7 +731,10 @@ char *editorPrompt(char *prompt){
 
     int c = editorReadKey();
 
-    if (c == '\x1b') {
+    if (c == DEL_KEY || c == CTRL_KEY('h') || c == BACKSPACE){
+      //after we do this there are 2 null terminators but the compiler ignores one so it's no need to worry
+      if (buflen != 0) buf[--buflen] = '\0';
+    } else if (c == '\x1b') {
       //empty the buff and empty the string!!
       editorSetStatusMessage("");
       free(buf);
