@@ -415,6 +415,27 @@ void editorInsertChar(int c ){
 
 }
 
+void editorInsertNewline() {
+  //if current line is empty make a new blank line
+  if (E.cx == 0) editorInsertRow(E.cy,"",0) ;
+  else {
+    //if the line your in has stuff and cursor is in the middle
+    //pressing enter shifts part of the string to the next line 
+    //naming the variable row for easier use
+    erow *row = &E.row[E.cy];
+    //inserting the new row 
+    editorInsertRow(E.cx+1,&row->chars[E.cx],row->size-E.cx);
+    //since the above function used realloc ... we need reinitialize the 
+    //row variable
+    row = &E.row[E.cy];
+    //now we need to clean the previous line ... the line that the user was in 
+    row->size = E.cx;
+    row->chars[row->size] = '\0';
+    //update row will will update that prev row with the new changes
+    editorUpdateRow(row);
+  } 
+}
+
 void editorDelChar() {
   //most of it is like the insert char method
   if (E.cy == E.numrows) return;
@@ -747,7 +768,7 @@ void editorProcessKeypress()
   switch (c)
   {
   case '\r'://this is actually the ENTER key!
-      /* TODO */
+    editorInsertNewline();
     break;
   case CTRL_KEY('q'):
       if (E.dirty && quit_times > 0) {
