@@ -424,7 +424,7 @@ void editorInsertNewline() {
     //naming the variable row for easier use
     erow *row = &E.row[E.cy];
     //inserting the new row 
-    editorInsertRow(E.cx+1,&row->chars[E.cx],row->size-E.cx);
+    editorInsertRow(E.cy+1,&row->chars[E.cx],row->size-E.cx);
     //since the above function used realloc ... we need reinitialize the 
     //row variable
     row = &E.row[E.cy];
