@@ -493,7 +493,12 @@ void editorOpen(char *filename)
 void editorSave(){
   // If we don't have a filename yet (e.g. new file), we can't save!
   if (E.filename == NULL) {
-    E.filename = editorPrompt("Save as: %s");
+    E.filename = editorPrompt("Save as: %s (ESC to cancel)");
+
+    if (E.filename == NULL){
+      editorSetStatusMessage("Save Aborted");
+      return;
+    }
   }
   
   int len;
@@ -726,7 +731,12 @@ char *editorPrompt(char *prompt){
 
     int c = editorReadKey();
 
-    if (c=='\r'){ //if enter key is pressed boom return the string
+    if (c == '\x1b') {
+      //empty the buff and empty the string!!
+      editorSetStatusMessage("");
+      free(buf);
+      return NULL;
+    } else if (c == '\r') { //if enter key is pressed boom return the string
       if (buflen !=0){
         editorSetStatusMessage("");
         return buf;
