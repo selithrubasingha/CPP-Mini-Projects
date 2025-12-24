@@ -79,6 +79,8 @@ struct abuf
 char *editorRowsToString(int *buflen);
 void editorDrawMessageBar(struct abuf *ab);
 void editorSetStatusMessage(const char *fmt, ...);
+void editorRefreshScreen();
+char *editorPrompt(char *prompt);
 
 /*** terminal ***/
 
@@ -490,7 +492,9 @@ void editorOpen(char *filename)
 
 void editorSave(){
   // If we don't have a filename yet (e.g. new file), we can't save!
-  if (E.filename == NULL) return;
+  if (E.filename == NULL) {
+    E.filename = editorPrompt("Save as: %s");
+  }
   
   int len;
 
@@ -706,6 +710,39 @@ void editorDrawMessageBar(struct abuf *ab) {
     abAppend(ab, E.statusmsg, msglen);
 }
 /*** input ***/
+char *editorPrompt(char *prompt){
+  //simple to imput a string and return it
+
+  //initiate a buffer size
+  size_t bufsize = 128;
+  char *buf = malloc(bufsize);
+
+  size_t buflen= 0 ;
+  buf[0] = '\0';
+
+  while (1){
+    editorSetStatusMessage(prompt , buf);
+    editorRefreshScreen();
+
+    int c = editorReadKey();
+
+    if (c=='\r'){ //if enter key is pressed boom return the string
+      if (buflen !=0){
+        editorSetStatusMessage("");
+        return buf;
+      }
+    }else if (!iscntrl(c) && c<128){
+      if(buflen == bufsize-1){//if the buf size is small .double the size
+        bufsize *=2;
+        buf = realloc(buf,bufsize);
+
+      }
+      //character by by character add it to the buffer and sheft the null terminator!!
+      buf[buflen++]=c;
+      buf[buflen]='\0';
+    }
+  }
+}
 
 void editorMoveCursor(int key)
 {
