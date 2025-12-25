@@ -80,7 +80,7 @@ char *editorRowsToString(int *buflen);
 void editorDrawMessageBar(struct abuf *ab);
 void editorSetStatusMessage(const char *fmt, ...);
 void editorRefreshScreen();
-char *editorPrompt(char *prompt);
+char *editorPrompt(char *prompt, void (*callback)(char *, int));
 
 /*** terminal ***/
 
@@ -504,7 +504,7 @@ void editorOpen(char *filename)
 void editorSave(){
   // If we don't have a filename yet (e.g. new file), we can't save!
   if (E.filename == NULL) {
-    E.filename = editorPrompt("Save as: %s (ESC to cancel)");
+    E.filename = editorPrompt("Save as: %s (ESC to cancel)",NULL);
 
     if (E.filename == NULL){
       editorSetStatusMessage("Save Aborted");
@@ -541,16 +541,12 @@ void editorSave(){
   editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 
-void editorFind(){
-  //getting the find string
-  char *query = editorPrompt("Search: %s (ESC to cancel)");
 
-  //error handling 
-  if (query == NULL) return;
-
-  
+void editorFindCallback(char *query, int key) {
+  if (key == '\r' || key == '\x1b') {
+    return;
+  }  
   int i ;
-
   //looping through every line
   for (i=0;i<E.numrows;i++){
 
@@ -569,9 +565,19 @@ void editorFind(){
       break; 
     }
   }
-  free(query);
+  
 }
 
+void editorFind(){
+    //getting the find string
+    //we use the call back function for incremental search !! (ecrytime you type a character it finds)
+  char *query = editorPrompt("Search: %s (ESC to cancel)",editorFindCallback);
+
+  if (query) free(query);
+
+
+
+}
 /*** append buffer ***/
 
 
@@ -758,7 +764,7 @@ void editorDrawMessageBar(struct abuf *ab) {
     abAppend(ab, E.statusmsg, msglen);
 }
 /*** input ***/
-char *editorPrompt(char *prompt){
+char *editorPrompt(char *prompt , void (*callback) (char* ,int)){
   //simple to imput a string and return it
 
   //initiate a buffer size
@@ -780,11 +786,13 @@ char *editorPrompt(char *prompt){
     } else if (c == '\x1b') {
       //empty the buff and empty the string!!
       editorSetStatusMessage("");
+      if (callback) callback(buf, c);
       free(buf);
       return NULL;
     } else if (c == '\r') { //if enter key is pressed boom return the string
       if (buflen !=0){
         editorSetStatusMessage("");
+        if (callback) callback(buf, c);
         return buf;
       }
     }else if (!iscntrl(c) && c<128){
@@ -797,6 +805,8 @@ char *editorPrompt(char *prompt){
       buf[buflen++]=c;
       buf[buflen]='\0';
     }
+
+    if (callback) callback(buf, c);
   }
 }
 
