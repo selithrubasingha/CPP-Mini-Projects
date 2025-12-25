@@ -529,6 +529,37 @@ void editorSave(){
   free(buf);
   editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
+
+void editorFind(){
+  //getting the find string
+  char *query = editorPrompt("Search: %s (ESC to cancel)");
+
+  //error handling 
+  if (query == NULL) return;
+
+  
+  int i ;
+
+  //looping through every line
+  for (i=0;i<E.numrows;i++){
+
+    erow *row = &E.row[i];
+    //super cool str str function that finds the substring or sth
+    //this finds the memory address of where the substring starts.
+    char *match = strstr(row->render, query);
+
+    if (match){
+      E.cy = i;
+      E.cx = match - row->render;
+
+      //this is wierd ... we set the rowoffset waaay down , and after , the scroll refresh fixes everything??
+      E.rowoff = E.numrows;
+      break; 
+    }
+  }
+  free(query);
+}
+
 /*** append buffer ***/
 
 
