@@ -44,9 +44,17 @@ enum editorHighlight {
   HL_NUMBER,
   HL_MATCH
 };
-/*** data ***/
 
-//
+#define HL_HIGHLIGHT_NUMBERS (1<<0)
+//the above is same for #define HL_HIGHLIGHT_NUMBERS 1
+//bithsifting is used for "aesthetics"
+/*** data ***/
+struct editorSyntax {
+  char *filetype;
+  char **filematch;
+  int flags;
+};
+
 typedef struct erow
 {
   int size;
@@ -80,6 +88,22 @@ struct abuf
   int len;   // The current length of the string stored in 'b'
 };
 
+/*** filetypes ***/
+
+char *C_HL_extensions[] = {".c",".h",".cpp",NULL};
+
+struct editorSyntax HLDB[] = {
+  {
+    "c",
+    C_HL_extensions,
+    HL_HIGHLIGHT_NUMBERS
+
+  },
+};
+
+
+#define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
+//the above calculate the number of the array
 
 /***function prototypes***/
 char *editorRowsToString(int *buflen);
@@ -353,6 +377,7 @@ int editorRowRxToCx(erow *row, int rx) {
   }
   return cx;
 }
+
 void editorUpdateRow(erow *row) {
   int tabs = 0;
   int j;
