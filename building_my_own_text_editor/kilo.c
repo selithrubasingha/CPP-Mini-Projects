@@ -283,15 +283,35 @@ int getWindowSize(int *rows, int *cols)
 
 /*** syntax highlighting ***/
 
+int is_separator(int c) {
+  return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL;
+}
+
 void editorUpdateSyntax(erow *row){//we color the syntax row by row || line by line
 
   row->hl= realloc(row->hl,row->rsize);
   memset(row->hl,HL_NORMAL,row->rsize);
 
-  for (int i=0;i<row->rsize;i++){
-    if (isdigit(row->render[i])){
+  //we store the previous highlihgted? varibale for more efficiency
+  //although it kind of spagettifies the code base
+  int prev_sep = 1;
+
+  int i = 0;
+  while (i < row->rsize) {
+    char c = row->render[i];
+    unsigned char prev_hl = (i > 0) ? row->hl[i - 1] : HL_NORMAL;
+
+    //seperator thing is used bscuase we dont want term1 or "123456" numbers to be higlighted right?
+    if ((isdigit(c) && (prev_sep || prev_hl == HL_NUMBER))  ||
+    //the .is for highlighting the . in decimals
+        (c == '.' && prev_hl == HL_NUMBER)) {
       row->hl[i] = HL_NUMBER;
+      i++;
+      prev_sep = 0;
+      continue;
     }
+    prev_sep = is_separator(c);
+    i++;
   }
 
 }
