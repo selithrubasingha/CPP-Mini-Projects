@@ -39,6 +39,10 @@ enum editorKey
   PAGE_DOWN
 };
 
+enum editorHighlight {
+  HL_NORMAL = 0,
+  HL_NUMBER
+};
 /*** data ***/
 
 //
@@ -276,6 +280,28 @@ int getWindowSize(int *rows, int *cols)
   }
 }
 
+/*** syntax highlighting ***/
+
+void editorUpdateSyntax(erow *row){//we color the syntax row by row || line by line
+
+  row->hl= realloc(row->hl,row->rsize);
+  memset(row->hl,HL_NORMAL,row->rsize);
+
+  for (int i=0;i<row->rsize;i++){
+    if (isdigit(row->render[i])){
+      row->hl[i] = HL_NUMBER;
+    }
+  }
+
+}
+
+int editorSyntaxToColor(int hl) {
+  switch (hl) {
+    case HL_NUMBER: return 31;
+    default: return 37;
+  }
+}
+
 /*** row operations ***/
 
 // Convert cursor x position to render x position
@@ -331,6 +357,9 @@ void editorUpdateRow(erow *row) {
   row->render[idx] = '\0';
   //idx captured the actual size of the render buffer
   row->rsize = idx;
+
+  //syntax coloring done here.
+  editorUpdateSyntax(row);
 }
 
 void editorInsertRow(int at, char *s, size_t len)
@@ -353,6 +382,7 @@ void editorInsertRow(int at, char *s, size_t len)
   //resetting the render buffer
   E.row[at].rsize = 0;
   E.row[at].render = NULL;
+  E.row[at].hl = NULL; //highlight set to null
   //after the reset t=we use the row , clean it , and reuse it to display the next row.
   editorUpdateRow(&E.row[at]);
 
@@ -393,6 +423,7 @@ void editorFreeRow(erow *row) {
   //freeing the memory for render and chars arrays
   free(row->render);
   free(row->chars);
+  free(row->hl);
 }
 
 void editorDelRow(int at) {
@@ -716,21 +747,29 @@ void editorDrawRows(struct abuf *ab)
       //...
       //we take the string LINE BY LINE
      char *c = &E.row[filerow].render[E.coloff];
+
+     //an 8 bit datatype 0-255
+     unsigned char *hl = &E.row[filerow].hl[E.coloff];
      int j ;
 
      //we check for digits ... the digits need to be colored!!
      //in each line we should add har by char
      for (j=0;j<len;j++){
-      if (isdigit(c[j])){
-        //inside the color escape sequence add the integer
-        abAppend(ab, "\x1b[31m", 5);
-        abAppend(ab, &c[j], 1);
+      if (hl[j] == HL_NORMAL){
         abAppend(ab, "\x1b[39m", 5);
+        abAppend(ab, &c[j], 1);
 
       }else {
-        abAppend(ab , &c[j],1);
+        int color = editorSyntaxToColor(hl[j]);
+        char buf[16];
+        int clen = snprintf(buf, sizeof(buf), "\x1b[%dm", color);
+        abAppend(ab, buf, clen);
+        abAppend(ab, &c[j], 1);
+
       }
      }
+     abAppend(ab, "\x1b[39m", 5);
+
     }
     
     //clear the rest of the line and go to the next line
