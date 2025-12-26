@@ -355,9 +355,12 @@ int editorSyntaxToColor(int hl) {
 }
 
 void editorSelectSyntaxHighlight() {
+  //this method checks what the filetype is from the files array
+
   E.syntax = NULL;
   if (E.filename == NULL) return ; 
 
+  //ext contains the string after the dot .
   char *ext = strrchr(E.filename,'.');
 
   for (unsigned int j = 0; j < HLDB_ENTRIES; j++) {
@@ -365,10 +368,23 @@ void editorSelectSyntaxHighlight() {
     unsigned int i = 0 ;
 
     while (s->filematch[i]){
+      //is_ext  is used to differentiate between Makefile without . s and . file like python s++ files
       int is_ext = (s->filematch[i][0]=='.');
+
+      //string match? logic
       if ((is_ext && ext && !strcmp(ext, s->filematch[i])) ||
           (!is_ext && strstr(E.filename, s->filematch[i]))) {
         E.syntax = s;
+
+        //after we save the file as .c the highlights don't work afterwards
+        //we fix that with thsi block right below
+        int filerow;
+        for (filerow = 0; filerow < E.numrows; filerow++) {
+          //updating line by line
+          editorUpdateSyntax(&E.row[filerow]);
+        }
+
+
         return;
       }
       i++;
@@ -584,6 +600,8 @@ void editorOpen(char *filename)
   free(E.filename);
   E.filename = strdup(filename);
 
+  editorSelectSyntaxHighlight();
+
   FILE *fp = fopen(filename, "r");
   if (!fp)
     die("fopen");
@@ -617,6 +635,7 @@ void editorSave(){
       editorSetStatusMessage("Save Aborted");
       return;
     }
+    editorSelectSyntaxHighlight();
   }
   
   int len;
