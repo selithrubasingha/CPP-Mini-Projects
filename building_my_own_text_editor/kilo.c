@@ -48,6 +48,7 @@ typedef struct erow
   int rsize;
   char *chars;
   char *render;
+  unsigned char *hl;//hl->highlight 
 } erow;
 
 struct editorConfig
@@ -543,20 +544,42 @@ void editorSave(){
 
 
 void editorFindCallback(char *query, int key) {
+  static int last_match = -1;
+  static int direction = 1;
+
   if (key == '\r' || key == '\x1b') {
+    last_match = -1;
+    direction = 1;
     return;
-  }  
+  } else if (key == ARROW_RIGHT || key == ARROW_DOWN) {
+    direction = 1;
+  } else if (key == ARROW_LEFT || key == ARROW_UP) {
+    direction = -1;
+  } else {
+    last_match = -1;
+    direction = 1;
+  }
+
+  if (last_match==-1) direction = 1;
+  int current = last_match;
+
   int i ;
   //looping through every line
   for (i=0;i<E.numrows;i++){
+    current+=direction;
+    if (current==-1) current= E.numrows - 1;
+    else if (current==E.numrows) current = 0 ;
 
-    erow *row = &E.row[i];
+    erow *row = &E.row[current];
+
     //super cool str str function that finds the substring or sth
     //this finds the memory address of where the substring starts.
     char *match = strstr(row->render, query);
 
     if (match){
-      E.cy = i;
+      last_match = current;
+      E.cy = current;
+
       E.cx = editorRowRxToCx(row, match - row->render);//match-row.render gives us the render rx!! the one with "    ".. but we need cx
       //a.k.a the one with \t s
 
@@ -575,7 +598,8 @@ void editorFind(){
   int saved_rowoff = E.rowoff;
     //getting the find string
     //we use the call back function for incremental search !! (ecrytime you type a character it finds)
-  char *query = editorPrompt("Search: %s (ESC to cancel)",editorFindCallback);
+  char *query = editorPrompt("Search: %s (Use ESC/Arrows/Enter)",
+                             editorFindCallback);
 
   if (query) free(query);
   else {
@@ -689,7 +713,24 @@ void editorDrawRows(struct abuf *ab)
         len = E.screencols;
       //render is a string ... so when we say render[x] it means start the line of string from x position! 
       // that is how we add the column offset baby!
-      abAppend(ab, &E.row[filerow].render[E.coloff], len);
+      //...
+      //we take the string LINE BY LINE
+     char *c = &E.row[filerow].render[E.coloff];
+     int j ;
+
+     //we check for digits ... the digits need to be colored!!
+     //in each line we should add har by char
+     for (j=0;j<len;j++){
+      if (isdigit(c[j])){
+        //inside the color escape sequence add the integer
+        abAppend(ab, "\x1b[31m", 5);
+        abAppend(ab, &c[j], 1);
+        abAppend(ab, "\x1b[39m", 5);
+
+      }else {
+        abAppend(ab , &c[j],1);
+      }
+     }
     }
     
     //clear the rest of the line and go to the next line
