@@ -70,10 +70,12 @@ struct editorSyntax {
 
 typedef struct erow
 {
+  int idx;
   int size;
   int rsize;
   char *chars;
   char *render;
+  int hl_open_comment; // for multi line comment logic
   unsigned char *hl;//hl->highlight 
 } erow;
 
@@ -356,7 +358,8 @@ void editorUpdateSyntax(erow *row){//we color the syntax row by row || line by l
   //although it kind of spagettifies the code base
   int prev_sep = 1;
   int in_string = 0;
-  int in_comment = 0;
+  //checking is the prev line started a multiline line comment
+  int in_comment = (row->idx > 0 && E.row[row->idx - 1].hl_open_comment);
 
   int i = 0;
   while (i < row->rsize) {
@@ -459,6 +462,13 @@ void editorUpdateSyntax(erow *row){//we color the syntax row by row || line by l
     prev_sep = is_separator(c);
     i++;
   }
+
+  //after the loop ,we set the in_comment to whatever is left ... so the editor know 
+  //if we were in a multiline comment at the end
+  int changed = (row->hl_open_comment != in_comment);
+  row->hl_open_comment = in_comment;
+  if (changed && row->idx + 1 < E.numrows)
+    editorUpdateSyntax(&E.row[row->idx + 1]);
 
 }
 
@@ -584,6 +594,12 @@ void editorInsertRow(int at, char *s, size_t len)
   //if we insert a row in the middle you gotta shift the rest of the rows
   memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (E.numrows - at));
 
+  //if you insert a row in the middle the whole indexes should be shifted!! that is why we use a for loop!
+  for (int j = at + 1; j <= E.numrows; j++) E.row[j].idx++;
+
+  //storing the index at variable inside the struct for later use
+  E.row[at].idx = at;
+
   //assigning the data that is to be WRITTEN in the row
   E.row[at].size = len;
   E.row[at].chars = malloc(len + 1);
@@ -597,6 +613,8 @@ void editorInsertRow(int at, char *s, size_t len)
   E.row[at].render = NULL;
   E.row[at].hl = NULL; //highlight set to null
   //after the reset t=we use the row , clean it , and reuse it to display the next row.
+  //default multicomment value
+  E.row[at].hl_open_comment = 0;
   editorUpdateRow(&E.row[at]);
 
   E.numrows++;
@@ -645,6 +663,7 @@ void editorDelRow(int at) {
   //this is the same as del char 
   //BUT THERE IS A CHANGE ! notice we shift the whole set of rows one up!!!!
   memmove(&E.row[at], &E.row[at + 1], sizeof(erow) * (E.numrows - at - 1));
+  for (int j = at; j < E.numrows - 1; j++) E.row[j].idx--;
   E.numrows--;
   E.dirty++;
   }
