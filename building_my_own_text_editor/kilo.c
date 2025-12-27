@@ -22,7 +22,10 @@
 #define KILO_VERSION "0.0.1"
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define KILO_QUIT_TIMES 1
-
+/*hello 
+everybody
+ my name is
+  selith */
 
 //the keys we use in the text editor
 enum editorKey
@@ -44,6 +47,7 @@ enum editorHighlight {
   HL_NUMBER,
   HL_KEYWORD1,
   HL_KEYWORD2,
+  HL_MLCOMMENT,
   HL_STRING,
   HL_COMMENT,
   HL_MATCH
@@ -59,6 +63,8 @@ struct editorSyntax {
   char **filematch;
   char **keywords;
   char *singleline_comment_start;//cause different files have different ways of commenting !
+  char *multiline_comment_start;
+  char *multiline_comment_end;
   int flags;
 };
 
@@ -111,7 +117,7 @@ struct editorSyntax HLDB[] = {
     "c",
     C_HL_extensions,
     C_HL_keywords,
-    "//",
+    "//", "/*", "*/",
     HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
 
   },
@@ -338,12 +344,19 @@ void editorUpdateSyntax(erow *row){//we color the syntax row by row || line by l
 
   //for the commenting stuffs
   char *scs = E.syntax->singleline_comment_start;
+  char *mcs = E.syntax->multiline_comment_start;
+  char *mce = E.syntax->multiline_comment_end;
+
+
   int scs_len = scs ? strlen(scs) : 0;
+  int mcs_len = mcs ? strlen(mcs) : 0;// "*/" so len is 2
+  int mce_len = mce ? strlen(mce) : 0;//also len is 2
 
   //we store the previous highlihgted? varibale for more efficiency
   //although it kind of spagettifies the code base
   int prev_sep = 1;
   int in_string = 0;
+  int in_comment = 0;
 
   int i = 0;
   while (i < row->rsize) {
@@ -357,6 +370,27 @@ void editorUpdateSyntax(erow *row){//we color the syntax row by row || line by l
       }
     }
 
+    //if multiline comment is ending 
+    if (mcs_len && mce_len && !in_string) {
+      if (in_comment) {
+        row->hl[i] = HL_MLCOMMENT;
+        if (!strncmp(&row->render[i], mce, mce_len)) {
+          memset(&row->hl[i], HL_MLCOMMENT, mce_len);
+          i += mce_len;
+          in_comment = 0;
+          prev_sep = 1;
+          continue;
+        } else {
+          i++;
+          continue;
+        }
+      } else if (!strncmp(&row->render[i], mcs, mcs_len)) {
+        memset(&row->hl[i], HL_MLCOMMENT, mcs_len);
+        i += mcs_len;
+        in_comment = 1;
+        continue;
+      }
+    }
     //string checkng if statement .. mostly string are stuff inside " "
     if (E.syntax->flags & HL_HIGHLIGHT_STRINGS){
       if (in_string){
@@ -430,7 +464,8 @@ void editorUpdateSyntax(erow *row){//we color the syntax row by row || line by l
 
 int editorSyntaxToColor(int hl) {
   switch (hl) {
-    case HL_COMMENT: return 36;
+    case HL_COMMENT:
+    case HL_MLCOMMENT: return 36;
     case HL_STRING: return 35;
     case HL_KEYWORD1: return 33;
     case HL_KEYWORD2: return 32;
