@@ -1,16 +1,9 @@
 #include <unistd.h>  // Required for sbrk
 #include <stddef.h>  // Required for size_t (or use <stdlib.h>)
 #include <pthread.h> // For pthread_mutex_lock, pthread_mutex_t
+#include <unistd.h>
+#include <string.h>
 typedef char ALIGN[16];
-
-pthread_mutex_t global_malloc_lock;
-header_t *head, *tail;
-
-struct header_t {
-    size_t size;
-    unsigned is_free;
-    struct header_t* next;
-};
 
 //union is like a struct but it can  force a specific size ... in this case 16 bytes
 union header {
@@ -26,8 +19,27 @@ union header {
 
 typedef union header header_t;
 
+header_t *head, *tail;
+pthread_mutex_t global_malloc_lock;
+
+header_t* get_free_block(size_t size);
+
+struct header_t {
+    size_t size;
+    unsigned is_free;
+    struct header_t* next;
+};
+
+
+
+
+
 
 void *malloc(size_t size){
+
+    //for testing purposes
+    char msg[] = "Malloc was called!\n";
+    write(1, msg, strlen(msg));
 
     size_t total_size ;
     void* block;
@@ -47,7 +59,7 @@ void *malloc(size_t size){
     total_size = sizeof(header_t)+size;
     
     //sbrk-> set pointer break ... increase heap size by "size" amount 
-    block = sbrk(size);
+    block = sbrk(total_size);
 
     //void* is for type casting -1 into a void pointer
     if (block== (void*)-1){ 
