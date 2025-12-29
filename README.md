@@ -18,6 +18,22 @@ A high-performance Hashmap data structure built from the ground up to understand
   * Collision resolution (Chaining/Open Addressing).
   * Dynamic resizing and memory management.
 
+### 3. [Memory Allocator From Scratch](./Memory_Allocator_from_scratch/)
+
+A custom implementation of the C standard library memory management functions (malloc, free, calloc, realloc) designed to replace the system allocator at runtime.
+
+**Tech:** C, Pthreads, Linux System Calls ( `sbrk`, `unistd.h`)
+
+**Key Features:**
+
+* Thread-safe memory allocation using mutex locks.
+
+* Manual heap management using sbrk and pointer arithmetic.
+
+* Library interposition (`LD_PRELOAD`) to inject the allocator into standard system commands like `ls`.
+
+
+
 ---
 
 ### 🛠️ How to Run
