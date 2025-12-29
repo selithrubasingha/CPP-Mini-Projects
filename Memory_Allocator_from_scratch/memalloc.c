@@ -131,6 +131,10 @@ void free(void* block){
 }
 
 void *calloc(size_t num , size_t nsize){
+    /*
+    calloc takes in arraylike data item , and no_of_items and allocates memory for the array items
+    calloc allocates memory and also fills it with 0 bytes 
+    */
     size_t size;
     void *block;
 
@@ -138,12 +142,21 @@ void *calloc(size_t num , size_t nsize){
 
     size = num * nsize ;
 
+    /*
+    if a*b=c then c/b=a , if size were to be too large overflow ...and give the wrong answer
+    we can check if the multipication was fine with the following code.
+    */
     if ((nsize != size / num)) return NULL;
 
     block = malloc (size);
 
     if (!block) return NULL;
 
+    /*
+    with memset we set the allocated memory area with 0 bytes (not 0 int)
+    it's like pre cleaning the allocated area ! befpre using it
+    in the normal malloc , the allocated area might have garbage data inside which will be over written
+    */
     memset(block,0,size);
     return block ;
 }
