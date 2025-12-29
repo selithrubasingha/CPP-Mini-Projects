@@ -70,6 +70,7 @@ void *malloc(size_t size){
 }
 
 header_t* get_free_block(size_t size){
+
     header_t* curr = head ; 
     while (curr) {
         if (curr->s.is_free && curr->s.size >=size)
@@ -78,3 +79,50 @@ header_t* get_free_block(size_t size){
     }
     return NULL;
 }
+
+void free(void* block){
+
+    header_t *header , *tmp ; 
+    void *programbreak;
+
+    if (!block) return ; 
+
+    pthread_mutex_lock(&global_malloc_lock);
+    header = (header_t*)block -1;
+
+    programbreak = sbrk(0);
+    /*
+    if the block is in the edge of the heap.
+    last_adress = first_adress + size ::: (char*) block + header->s.zie ::: these are identical
+    why use char* ? because char means 1 byte (int is 4 and so on ...) 
+    we tell the computer the block is char adress and the computer adds the s.size amount multiplied by the char size which is one this case
+    if it were int then block + size*4 !!
+    */
+    if ((char*)block +header->s.size == programbreak){
+        //changing the head and the tail accoridnlgy
+        if (head == tail){
+            head = tail = NULL;
+        }else {
+            tmp = head ; 
+            while (tmp){
+                if (tmp->s.next == tail){
+                    tmp->s.next = NULL;
+                    tail = tmp;
+                }
+                tmp = tmp->s.next;
+            }
+        }
+        sbrk(0 - sizeof(header_t) - header->s.size);
+        pthread_mutex_unlock(&global_malloc_lock);
+        return;
+    }
+
+    /*if the mem block is not at the adge ... then we just mark that block as is_free
+    later when the program exits we remove all of them ... or during the program time .. we just overwrite 
+    the data on that block
+    */
+    header->s.is_free = 1 ;
+    pthread_mutex_unlock(&global_malloc_lock);
+}
+
+
